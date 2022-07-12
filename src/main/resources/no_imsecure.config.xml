@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+    <!-- 功能相关 -->
+    <!-- Functions -->
+    <secure>
+        <noPublicKey>
+            <!-- 如果设置为true，将阻止传入玩家公钥 -->
+            <!-- If true, block player's public key from client. -->
+            <read>true</read>
+            <!-- 如果设置为true，将阻止传出玩家公钥 -->
+            <!-- If true, block player's public key to server. -->
+            <write>true</write>
+        </noPublicKey>
+    </secure>
+    <!-- 显示相关相关 -->
+    <!-- Renders -->
+    <render>
+        <noInsecure>
+            <!-- 如果设置为true，将禁止服务器不安全提示 -->
+            <!-- If true, block server insecure warning. -->
+            <server>true</server>
+            <!-- 如果设置为true，将禁止聊天不安全提示 -->
+            <!-- If true, block chat insecure warning. -->
+            <chat>true</chat>
+        </noInsecure>
+    </render>
+</configuration>

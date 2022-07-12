@@ -5,15 +5,21 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.encryption.PlayerPublicKey;
 import net.minecraft.network.encryption.SignatureVerifier;
+import net.minecraft.network.packet.c2s.login.LoginHelloC2SPacket;
 import net.minecraft.network.packet.s2c.login.LoginCompressionS2CPacket;
+import net.minecraft.network.packet.s2c.login.LoginHelloS2CPacket;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.DisconnectS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerLoginNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.TextifiedException;
+import online.flowerinsnow.noimsecure.eci.PlayerPublicKeyReadCallback;
+import online.flowerinsnow.noimsecure.eci.PlayerPublicKeyVerfyingCallback;
 import online.flowerinsnow.noimsecure.util.ReflectMirror;
+import org.apache.commons.lang3.Validate;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
@@ -42,6 +48,9 @@ public abstract class MixinServerLoginNetworkHandler {
     Object state;
     @Shadow
     private ServerPlayerEntity delayedPlayer;
+    @Final
+    @Shadow
+    private byte[] nonce;
 
     @Shadow
     protected abstract GameProfile toOfflineProfile(GameProfile profile);
@@ -53,6 +62,10 @@ public abstract class MixinServerLoginNetworkHandler {
     public abstract void disconnect(Text reason);
     @Shadow
     protected abstract void addToServer(ServerPlayerEntity player);
+    @Shadow
+    public static boolean isValidName(String name) {
+        return false;
+    }
 
 
     /**
@@ -67,7 +80,9 @@ public abstract class MixinServerLoginNetworkHandler {
         } else {
             try {
                 SignatureVerifier signatureVerifier = this.server.getServicesSignatureVerifier();
-                playerPublicKey = getVerifiedPublicKey(this.publicKeyData, this.profile.getId(), signatureVerifier, this.server.shouldEnforceSecureProfile());
+                if (PlayerPublicKeyVerfyingCallback.EVENT.invoker().interact(server, profile, publicKeyData, connection) != ActionResult.SUCCESS) { // Event not cancelled
+                    playerPublicKey = getVerifiedPublicKey(this.publicKeyData, this.profile.getId(), signatureVerifier, this.server.shouldEnforceSecureProfile());
+                }
             } catch (TextifiedException var7) {
                 LOGGER.error(var7.getMessage(), var7.getCause());
                 if (!this.connection.isLocal()) {
@@ -104,6 +119,33 @@ public abstract class MixinServerLoginNetworkHandler {
                 Text text2 = Text.translatable("multiplayer.disconnect.invalid_player_data");
                 this.connection.send(new DisconnectS2CPacket(text2));
                 this.connection.disconnect(text2);
+            }
+        }
+    }
+
+    /**
+     * @author flowerinsnow
+     * @reason Cannot do this with inject.
+     */
+    @Overwrite
+    public void onHello(LoginHelloC2SPacket packet) {
+        Validate.validState(this.state == ReflectMirror.ServerLoginNetworkHandler.State.HELLO, "Unexpected hello packet");
+        Validate.validState(isValidName(packet.name()), "Invalid characters in username");
+        if (PlayerPublicKeyReadCallback.EVENT.invoker().interact(packet) != ActionResult.SUCCESS) { // Event not cancelled
+            this.publicKeyData = packet.publicKey().orElse(null);
+        }
+
+        GameProfile gameProfile = this.server.getHostProfile();
+        if (gameProfile != null && packet.name().equalsIgnoreCase(gameProfile.getName())) {
+            this.profile = gameProfile;
+            this.state = ReflectMirror.ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
+        } else {
+            this.profile = new GameProfile(null, packet.name());
+            if (this.server.isOnlineMode() && !this.connection.isLocal()) {
+                this.state = ReflectMirror.ServerLoginNetworkHandler.State.KEY;
+                this.connection.send(new LoginHelloS2CPacket("", this.server.getKeyPair().getPublic().getEncoded(), this.nonce));
+            } else {
+                this.state = ReflectMirror.ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
             }
         }
     }
