@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "NoImSecure",
+  "version": "${version}",
+  "name": "NoImSecure",
+  "description": "A mod for minecraft 1.19.1 socail screen.",
+  "authors": [
+    "flowerinsnow"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/NoImSecure/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "online.flowerinsnow.noimsecure.client.NoImSecureClient"
+    ],
+    "main": [
+      "online.flowerinsnow.noimsecure.NoImSecure"
+    ]
+  },
+  "mixins": [
+    "NoImSecure.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.14.8",
+    "fabric": "*",
+    "minecraft": "1.19.1-rc.4"
+  }
+}
