@@ -4,6 +4,7 @@
   "package": "online.flowerinsnow.noimsecure.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "MixinServerLoginNetworkHandler"
   ],
   "client": [
   ],
