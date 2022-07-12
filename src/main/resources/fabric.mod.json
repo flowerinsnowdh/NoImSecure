@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "NoImSecure",
+  "id": "no_imsecure",
   "version": "${version}",
   "name": "NoImSecure",
   "description": "A mod for minecraft 1.19.1 social screen.",
